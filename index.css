@@ -1,0 +1,22 @@
+div{
+    border:solid 1px darkcyan;
+    cursor: default;
+}
+#panelContainer{
+    display: flex;
+}
+#leftPanel, #rightPanel{
+    border:solid 1px cyan;
+}
+#leftPanel.active, #rightPanel.active{
+    border:solid 1px darkred;
+}
+.place{
+    background-color: darkkhaki;
+}
+.rootElement{
+    background-color: palegoldenrod;
+}
+.selected{
+    border:solid 5px greenyellow;
+}
