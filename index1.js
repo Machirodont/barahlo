@@ -5,108 +5,94 @@ function log(msg){
 
 log("start");
 
-/*
-@localId
-@name
-+itemList
-+localCount
-+rootList
- */
-class Some {
-    //ToDo - стартовая инициализация  Some.localCount=0, Some.itemList=[]
-     constructor(options){
-        this.name=options.name;
-        if(typeof(options.localId)==="number") {
-            this.localId=options.localId;
-            if(this.localId>Some.localCount){
-                Some.localCount=this.localId;
-            }
+function Some(options){
+    this.name=options.name;
+    if(typeof(options.localId)==="number") {
+        this.localId=options.localId;
+        if(this.localId>Some.localCount){
+            Some.localCount=this.localId;
         }
-        else {
-            if(! Some.localCount){
-                Some.localCount=0;
-                Some.itemList=[];
-                Some.rootList=[];
-            }
-            Some.localCount++;
-            this.localId =Some.localCount;
-        }
-         Some.itemList[this.localId] = this;
-         Some.rootList[this.localId] = this;
-         this.place=null;
-        log(this.name+" "+this.localId);
     }
+    else {
+        Some.localCount++;
+        this.localId =Some.localCount;
+    }
+    Some.itemList[this.localId] = this;
+    this.place=Some.itemList[1];
+    log(this.name+" "+this.localId);
+}
+Some.localCount=0;
+Some.itemList=[]; //Общий список всего что есть.
 
-    remove() {
-        delete Some.itemList[this.localId];
-    };
+Some.prototype.remove=function () {
+    delete Some.itemList[this.localId];
+};
 
-    /*
-    @place может быть объектом Place или id в Some.itemList
-     */
-    putIn(place) {
-        let newPlace=(place instanceof Place) ? place : (typeof(place) === 'number' && Some.itemList[place]!==undefined) ? Some.itemList[place] : null ;
-        if(newPlace!==null) {
-            if (this.place !== undefined) {
-                delete this.place.list[this.localId];
-            }
-            this.place = newPlace;
-            this.place.list[this.localId] = this;
-        }
-    };
+Some.prototype.putIn=function (place) {
+    if(this.place!==undefined) {
+        delete this.place.list[this.localId];
+    }
+    this.place=place;
+    this.place.list[this.localId]=this;
+};
 
-    static listToJSON(){
-        var obj={};
-        var i=0;
-        for(var k in Some.itemList){
-            obj[k]={
-                localId:Some.itemList[k].localId,
-                name:Some.itemList[k].name,
-                constr: Some.itemList[k].constructor.name,
-                placeId: Some.itemList[k].place.localId
-            };
-        }
-        return JSON.stringify(obj);
-    };
+Some.listToJSON=function(){
+    var obj={};
+    var i=0;
+    for(var k in Some.itemList){
+       obj[k]={
+           localId:Some.itemList[k].localId,
+           name:Some.itemList[k].name,
+           constr: Some.itemList[k].constructor.name,
+           placeId: Some.itemList[k].place.localId
+       };
+     }
+    return JSON.stringify(obj);
+};
 
-    static listFromJSON() {
-        Some.localCount=0;
-        Some.itemList=[];
-        if(localStorage.getItem("itemList")!==null) {
-            var loadedItemList = JSON.parse(localStorage.getItem("itemList"));
-            console.log(loadedItemList);
-            for (var key in loadedItemList) {
-                var item;
-                if (loadedItemList[key].constr === "Place") {
-                    item = new Place({name: loadedItemList[key].name, localId: key});
-                }
-                else {
-                    item = new Some({name: loadedItemList[key].name, localId: key});
-                }
-                item.putIn(Some.itemList[loadedItemList[key].placeId]);
-            }
-            return true;
-        }
-        else{
-            return false;
-        }
-    };
+Some.listFromJSON=function () {
+  Some.localCount=0;
+  Some.itemList=[];
+  if(localStorage.getItem("itemList")!==null) {
+      var loadedItemList = JSON.parse(localStorage.getItem("itemList"));
+      console.log(loadedItemList);
+      for (var key in loadedItemList) {
+          var item;
+          if (loadedItemList[key].constr === "Place") {
+              item = new Place({name: loadedItemList[key].name, localId: key});
+              item.putIn(Some.itemList[loadedItemList[key].placeId]);
+          }
+          else {
+              item = new Some({name: loadedItemList[key].name, localId: key});
+              console.log(key + " " + loadedItemList[key].placeId);
+              item.putIn(Some.itemList[loadedItemList[key].placeId]);
+          }
+      }
+      return true;
+  }
+  else{
+      return false;
+  }
+};
+
+function Place(options){
+    var r=new Some(options);
+    r.list={};
+    r.constructor=Place;
+    return r;
 }
 
-/*
-@list
- */
-class Place extends Some{
-    constructor(options){
-        super(options);
-        this.list={};
-    }
+
+if(!Some.listFromJSON()) {
+    new Place({name: "ROOT"});
+    Some.itemList[1].putIn(Some.itemList[1]);
 }
+//;
 
 var lPanel=document.getElementById("leftPanel");
 var rPanel=document.getElementById("rightPanel");
-lPanel.place=null;
-rPanel.place=null;
+lPanel.place=Some.itemList[1];
+rPanel.place=Some.itemList[1];
 lPanel.addEventListener("click",function () {
     setActive(this);
 });
@@ -186,7 +172,7 @@ function setActive(panel) {
         rPanel.classList.toggle("active");
     }
 
-    if(panel.place && panel.place.constructor!==Place){
+    if(panel.place.constructor!==Place){
         document.getElementById("newItemButton").style.display="none";
         document.getElementById("newPlaceButton").style.display="none";
     }
@@ -200,13 +186,11 @@ function setActive(panel) {
 function refreshList(panel) {
      function elementInPanelDOM(e) {
         var itemDiv = document.createElement("div");
-        itemDiv.textContent = (e) ? e.name + " #" + (getCode(e.localId)) : "ROOT";
+        itemDiv.textContent = e.name + " #" + (getCode(e.localId));
         itemDiv.itemPointer = e;
 
-        if(e){
-            if (e.constructor === Place) {
-                itemDiv.classList.add("place");
-            }
+        if(e.constructor===Place) {
+            itemDiv.classList.add("place");
         }
 
         itemDiv.addEventListener("click", function () {
@@ -218,32 +202,31 @@ function refreshList(panel) {
          });
         itemDiv.addEventListener("dblclick", function () {
             selectedListElement=undefined;
-            activePanel.place = (e) ? this.itemPointer : null;
+            activePanel.place = this.itemPointer;
             setActive(activePanel); //Для обновления статуса кнопок "создать предмет/место"
             refreshList(lPanel);
             refreshList(rPanel);
         });
+
         return itemDiv;
     }
 
     panel.innerHTML = "";
 
 
-/*
-    let s1 = (panel.place) ? panel.place.place : null;
+
+    var s1 = panel.place.place;
     var e1 = elementInPanelDOM(s1);
     e1.classList.add("rootElement");
     panel.appendChild(e1);
-*/
-    let s1 = panel.place;
-    let e1 = elementInPanelDOM(s1);
-    e1.textContent=".. ("+e1.textContent+")";
+
+    s1 = panel.place;
+    e1 = elementInPanelDOM(s1);
     e1.classList.add("rootElement");
     panel.appendChild(e1);
 
-    let list=(e) ? panel.place.list : Some.rootList;
-    for (var key in list) {
-        var s = list[key];
+    for (var key in panel.place.list) {
+        var s = panel.place.list[key];
         if (s !== panel.place) {
             var e = elementInPanelDOM(s);
             panel.appendChild(e);
@@ -269,10 +252,10 @@ function getCode(n){
 
 setInterval( function () {
     if (selectedListElement !== undefined) {
-      document.getElementById("monitor").textContent = ((selectedListElement.itemPointer) ? selectedListElement.itemPointer.name : "ROOT") + " в " + ((activePanel.place) ? activePanel.place.name : "ROOT");
+      document.getElementById("monitor").textContent = selectedListElement.itemPointer.name + " в " + activePanel.place.name;
     }
     else{
-        document.getElementById("monitor").textContent = "В "+((activePanel.place) ? activePanel.place.name : "ROOT");
+        document.getElementById("monitor").textContent = "В "+activePanel.place.name;
 
     }
 
