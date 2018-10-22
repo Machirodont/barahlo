@@ -1,8 +1,5 @@
 <?php
-const MYSQL_HOST = "localhost";
-const MYSQL_USER = "ucit";
-const MYSQL_PASS = "dev";
-const MYSQL_DB = "barahlo";
+require ("config.php");
 
 $mysqli = new mysqli(MYSQL_HOST, MYSQL_USER, MYSQL_PASS, MYSQL_DB);
 $mysqli->query("SET CHARACTER SET utf8 ");
